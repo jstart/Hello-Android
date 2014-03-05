@@ -82,7 +82,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
         if (sharedText != null) {
             // Update UI to reflect text being shared
             String[] stringArray = sharedText.split("\n");
-//            speakOut(stringArray[0]);
+            speakOut(stringArray[0]);
             try {
                 requestManager.loadURL(stringArray[0]);
             } catch (JSONException e) {

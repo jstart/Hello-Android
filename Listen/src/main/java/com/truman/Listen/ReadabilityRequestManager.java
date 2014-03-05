@@ -21,9 +21,9 @@ import org.json.JSONObject;
  */
 public class ReadabilityRequestManager {
     RequestQueue queue;
-    MainActivity activity;
+    Activity activity;
 
-    public ReadabilityRequestManager(RequestQueue queue, MainActivity activity){
+    public ReadabilityRequestManager(RequestQueue queue, Activity activity){
         this.queue = queue;
         this.activity = activity;
     }
@@ -38,16 +38,7 @@ public class ReadabilityRequestManager {
     private class ResponseListener implements Response.Listener<JSONObject>{
         @Override
         public void onResponse(JSONObject response) {
-            try {
-                Log.d("com.truman.Listen",response.getString("content"));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            try {
-                activity.speakOut(response.getString("content"));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            Log.d("com.truman.Listen",response.toString());
         }
 
     }
