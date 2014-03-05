@@ -1,8 +1,10 @@
-package com.truman.Hello;
+package com.truman.Listen;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,12 +16,15 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
 
 import java.util.ArrayList;
 
-import static java.util.Locale.*;
+import static java.util.Locale.CANADA;
 
-public class MainActivity extends Activity implements View.OnClickListener, TextToSpeech.OnInitListener {
+public class MainActivity extends Activity implements View.OnClickListener, TextToSpeech.OnInitListener, TextToSpeech.OnUtteranceCompletedListener {
 
     private static RequestQueue queue;
     ArrayAdapter<String> mArrayAdapter;
@@ -31,6 +36,8 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
     Button mainButton;
     EditText mainEditText;
     ListView mainListView;
+
+    ReadabilityRequestManager requestManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +60,36 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
 
         tts = new TextToSpeech(this, this);
         tts.setPitch(0.8f);
+        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+            public void onStart(String utteranceId) {
+                Log.d("com.truman.listen", utteranceId);
+            }
 
+            public void onDone(String utteranceId) {
+                Log.d("com.truman.listen", utteranceId);
+            }
+
+            public void onError(String utteranceId) {
+                Log.d("com.truman.listen", utteranceId);
+            }
+        });
+        RequestQueue queue = Volley.newRequestQueue(this);
+        requestManager = new ReadabilityRequestManager(queue, this);
+    }
+
+    void handleSendText(Intent intent) throws JSONException {
+        String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+        if (sharedText != null) {
+            // Update UI to reflect text being shared
+            String[] stringArray = sharedText.split("\n");
+//            speakOut(stringArray[0]);
+            try {
+                requestManager.loadURL(stringArray[0]);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            mainTextView.setText(sharedText);
+        }
     }
 
     @Override
@@ -88,6 +124,13 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
         mArrayAdapter.notifyDataSetChanged();
 
         speakOut(mainEditText.getText().toString());
+
+        Intent intent=new Intent(android.content.Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+        intent.putExtra(Intent.EXTRA_TEXT, "Body of the message, woot!");
+
+        startActivity(Intent.createChooser(intent, "How do you want to share?"));
     }
 
     @Override
@@ -112,7 +155,23 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
                 Log.e("TTS", "This Language is not supported");
             } else {
                 mainButton.setEnabled(true);
-                speakOut("System Enabled");
+                // Get intent, action and MIME type
+                Intent intent = getIntent();
+                String action = intent.getAction();
+                String type = intent.getType();
+
+                if (Intent.ACTION_SEND.equals(action) && type != null) {
+                    if ("text/plain".equals(type)) {
+                        try {
+                            handleSendText(intent); // Handle text being sent
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else {
+                        // Handle other intents, such as being started from the home screen
+                    }
+                }
             }
 
         } else {
@@ -121,9 +180,13 @@ public class MainActivity extends Activity implements View.OnClickListener, Text
 
     }
 
-    private void speakOut(String text) {
-
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+    public void speakOut(String text) {
+        tts.speak(text, TextToSpeech.QUEUE_ADD, null);
     }
 
+    @Override
+    public void onUtteranceCompleted(String utteranceId) {
+        Log.d("com.truman.listen", utteranceId);
+
+    }
 }
